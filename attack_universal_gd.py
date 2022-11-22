@@ -11,9 +11,9 @@ class GradientDescentUniversalAttack:
         self.model = model
         self.train_dataloader = dataset.train_dataloader()
         self.test_dataloader = dataset.test_dataloader()
-        self.epsilon = torch.zeros((256, 256))
+        self.epsilon = torch.zeros((1, 256, 256))
 
-    def attack_train(self, alpha=0.01, max_iter=100, clipping=0.1):
+    def attack_train(self, learning_rate=0.1, max_iter=10, clipping=0.2):
         self.model.eval()
 
         epsilon = torch.zeros((1, 256, 256))
@@ -23,8 +23,6 @@ class GradientDescentUniversalAttack:
                 x, y = batch
                 y_target = torch.where(y == 1, 2, y)
                 batch_size = x.shape[0]
-                print(x.shape)
-                print("batch_size", batch_size)
                 epsilon_batch = torch.tile(epsilon, (batch_size, 1, 1, 1))
 
                 x_fooling = x.clone()
@@ -36,15 +34,12 @@ class GradientDescentUniversalAttack:
                 loss.backward()
 
                 gradient = x_fooling_var.grad.data
-                print("gradient shape", gradient.shape)
                 sum_gradient = torch.sum(gradient, 0)
-                print("sum_gradient shape", sum_gradient.shape)
-                print("aggregated_gradient shape", aggregated_gradient.shape)
                 aggregated_gradient += sum_gradient
-
                 x_fooling_var.grad.fill_(0)
 
-            epsilon -= torch.sign(aggregated_gradient) * alpha
+            norm = torch.sqrt(torch.sum(aggregated_gradient ** 2))
+            epsilon -= learning_rate * aggregated_gradient / norm
             epsilon = torch.clamp(epsilon, min=-clipping, max=clipping)
             print("epsilon", epsilon)
 
@@ -57,18 +52,18 @@ class GradientDescentUniversalAttack:
                 x, y = batch
                 x = x[0].unsqueeze(0)
                 y = y[0].unsqueeze(0)
-                y_pred = model.predict(x)
+                y_pred = self.model.predict(x)
 
                 X_fooling = x + self.epsilon
 
-                y_attack_pred = model.predict(X_fooling)
+                y_attack_pred = self.model.predict(X_fooling)
 
                 correct_ones = (y_pred == 1).sum()
                 attack_ones = (y_attack_pred == 1).sum()
                 print("predx", correct_ones)
                 print("pred_attack", attack_ones)
 
-                visualize_attack_results("universal", x, X_fooling, self.epsilon, y, y_pred, y_attack_pred)
+                visualize_attack_results("universal_gd", x, X_fooling, self.epsilon, y, y_pred, y_attack_pred)
                 break
 
 
@@ -76,7 +71,6 @@ if __name__ == "__main__":
     checkpoint_path = f'version_3/checkpoints/epoch=99-step=1700.ckpt'
     model = SegmentationModule.load_from_checkpoint(checkpoint_path)
     dataset = NeuroDataModule(32)
-    uni_attack = EpsilonUniversalAttack(model, dataset)
-    uni_attack.attack_train(alpha=0.01, max_iter=100, clipping=0.1)
+    uni_attack = GradientDescentUniversalAttack(model, dataset)
+    uni_attack.attack_train(learning_rate=0.1, max_iter=2, clipping=0.2)
     uni_attack.attack_test()
-

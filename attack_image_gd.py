@@ -76,7 +76,7 @@ def run_attack():
             print("predx", correct_ones)
             print("pred_attack", attack_ones)
 
-            visualize_attack_results("image_dependent_gd", x, X_fooling, perturbation, y, y_pred, y_attack_pred)
+            visualize_attack_results("image_gd", x, X_fooling, perturbation, y, y_pred, y_attack_pred)
             break
 
 
