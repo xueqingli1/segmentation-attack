@@ -13,7 +13,7 @@ class EpsilonUniversalAttack:
         self.test_dataloader = dataset.test_dataloader()
         self.epsilon = torch.zeros((256, 256))
 
-    def attack_train(self, alpha=0.01, max_iter=100, clipping=0.1):
+    def attack_train(self, alpha=0.01, max_iter=10, clipping=0.1):
         self.model.eval()
 
         epsilon = torch.zeros((1, 256, 256))
@@ -74,6 +74,6 @@ if __name__ == "__main__":
     model = SegmentationModule.load_from_checkpoint(checkpoint_path)
     dataset = NeuroDataModule(32)
     uni_attack = EpsilonUniversalAttack(model, dataset)
-    uni_attack.attack_train(alpha=0.01, max_iter=100, clipping=0.1)
+    uni_attack.attack_train(alpha=0.01, max_iter=5, clipping=0.1)
     uni_attack.attack_test()
 
