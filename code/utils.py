@@ -61,8 +61,8 @@ def visualize_attack_results(filename, x, x_fooling, perturbation, y, y_pred, y_
     perturbation = perturbation.numpy()
     min_num = np.min(perturbation)
     perturbation -= min_num
-    max_num = np.max(perturbation)
-    perturbation /= max_num
+    # max_num = np.max(perturbation)
+    # perturbation /= max_num
 
     annotation_matrix = []
     img, anno, anno_pred = draw_mask_comparsion(x, y, y_pred)
