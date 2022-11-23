@@ -52,24 +52,25 @@ def save_result(img, annotated, annotated_pred, filename):
     plt.title('Prediction')
     plt.savefig(filename)
 
-def visualize_attack_results(attack_name, x, x_fooling, perturbation, y, y_pred, y_attack_pred):
-    annotation_matrix = []
-
+def visualize_attack_results(filename, x, x_fooling, perturbation, y, y_pred, y_attack_pred):
     x = x.reshape(256, 256).numpy()
     x_fooling = x_fooling.reshape(256, 256).numpy()
     y = y.reshape(256, 256).numpy()
     y_pred = y_pred.reshape(256, 256).numpy()
     y_attack_pred = y_attack_pred.reshape(256, 256).numpy()
-    # perturbation = x_fooling - x
-    print(perturbation)
+    perturbation = perturbation.numpy()
+    min_num = np.min(perturbation)
+    perturbation -= min_num
+    max_num = np.max(perturbation)
+    perturbation /= max_num
 
+    annotation_matrix = []
     img, anno, anno_pred = draw_mask_comparsion(x, y, y_pred)
     pad_img = np.pad(img, [[1, 1], [1, 1], [0, 0]], 'constant', constant_values=1.0)
     pad_anno = np.pad(anno, [[1, 1], [1, 1], [0, 0]], 'constant', constant_values=1.0)
     pad_anno_pred = np.pad(anno_pred, [[1, 1], [1, 1], [0, 0]], 'constant', constant_values=1.0)
     annotation_matrix.append(np.concatenate([pad_img, pad_anno, pad_anno_pred], axis=1))
 
-    # attack_pred = draw_mask(x_fooling, y_attack_pred)
     x_fooling, pert, attack_pred = draw_attack_pert_and_mask(x_fooling, perturbation, y_attack_pred)
     pad_xfool = np.pad(x_fooling, [[1, 1], [1, 1], [0, 0]], 'constant', constant_values=1.0)
     pad_pert = np.pad(pert, [[1, 1], [1, 1], [0, 0]], 'constant', constant_values=1.0)
@@ -77,10 +78,11 @@ def visualize_attack_results(attack_name, x, x_fooling, perturbation, y, y_pred,
     annotation_matrix.append(np.concatenate([pad_xfool, pad_pert, pad_attack_pred], axis=1))
 
     annotation_matrix = np.concatenate(annotation_matrix, axis=0)
-    plt.figure(figsize=(2 * 15, 3 * 15))
+    plt.figure(figsize=(22, 16))
+    plt.suptitle(filename, fontsize=24)
     plt.imshow(annotation_matrix)
     plt.axis('off')
-    plt.savefig(f'attack_results/{attack_name}_attack.png')
+    plt.savefig(f'../attack_results/{filename}.png')
 
 
 if __name__ == '__main__':

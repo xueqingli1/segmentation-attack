@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 def get_task_data_in_numpy():
     dim = DIM
     class_num = CLASS_NUM
-    BASE_DIR = 'data/' + f'task2_{dim}D_{class_num}'
+    BASE_DIR = '../data/' + f'task2_{dim}D_{class_num}'
     images = {
         'train': np.load(BASE_DIR +'classtrainimages.npy').astype(np.uint8),
         'val': np.load(BASE_DIR +'classvalimages.npy').astype(np.uint8),

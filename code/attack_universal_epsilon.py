@@ -4,16 +4,17 @@ from torch.autograd import Variable
 from data import NeuroDataModule
 from model import SegmentationModule
 from utils import visualize_attack_results
+from labels import generate_random_label, generate_hide_one_label, count_label
 
 
-class GradientDescentUniversalAttack:
+class EpsilonUniversalAttack:
     def __init__(self, model, dataset=NeuroDataModule(32)):
         self.model = model
         self.train_dataloader = dataset.train_dataloader()
         self.test_dataloader = dataset.test_dataloader()
         self.epsilon = torch.zeros((1, 256, 256))
 
-    def attack_train(self, learning_rate=0.1, max_iter=10, clipping=0.2):
+    def attack_train(self, alpha=0.01, max_iter=10, clipping=0.1):
         self.model.eval()
 
         epsilon = torch.zeros((1, 256, 256))
@@ -38,8 +39,7 @@ class GradientDescentUniversalAttack:
                 aggregated_gradient += sum_gradient
                 x_fooling_var.grad.fill_(0)
 
-            norm = torch.sqrt(torch.sum(aggregated_gradient ** 2))
-            epsilon -= learning_rate * aggregated_gradient / norm
+            epsilon -= torch.sign(aggregated_gradient) * alpha
             epsilon = torch.clamp(epsilon, min=-clipping, max=clipping)
             print("epsilon", epsilon)
 
@@ -63,14 +63,15 @@ class GradientDescentUniversalAttack:
                 print("predx", correct_ones)
                 print("pred_attack", attack_ones)
 
-                visualize_attack_results("universal_gd", x, X_fooling, self.epsilon, y, y_pred, y_attack_pred)
+                visualize_attack_results("universal_epsilon", x, X_fooling, self.epsilon, y, y_pred, y_attack_pred)
                 break
 
 
 if __name__ == "__main__":
-    checkpoint_path = f'version_3/checkpoints/epoch=99-step=1700.ckpt'
+    checkpoint_path = f'../version_3/checkpoints/epoch=99-step=1700.ckpt'
     model = SegmentationModule.load_from_checkpoint(checkpoint_path)
     dataset = NeuroDataModule(32)
-    uni_attack = GradientDescentUniversalAttack(model, dataset)
-    uni_attack.attack_train(learning_rate=0.1, max_iter=2, clipping=0.2)
+    uni_attack = EpsilonUniversalAttack(model, dataset)
+    uni_attack.attack_train(alpha=0.01, max_iter=5, clipping=0.1)
     uni_attack.attack_test()
+
