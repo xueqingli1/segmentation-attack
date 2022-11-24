@@ -6,6 +6,7 @@ from model import SegmentationModule
 from utils import visualize_attack_results
 import matplotlib.pyplot as plt
 from labels import generate_random_label, generate_hide_one_label, count_label
+from labels2 import hide_with_nearest_segment
 
 class EpsilonImageAttack:
     def __init__(self, model):
@@ -22,6 +23,7 @@ class EpsilonImageAttack:
 
         for it in range(max_iter):
             attack_image = x_fooling_var + epsilon
+            attack_image = torch.clamp(attack_image, min=0, max=1)
             score_model = self.model(attack_image)
             loss = self.model.loss(score_model, y_target)
             loss.backward()
@@ -71,42 +73,42 @@ def run_attack():
     attack = EpsilonImageAttack(model)
 
     for idx, batch in enumerate(dataloader):
-        if idx == 1:
+        if idx == 3:
             x, y = batch
             x = x[1].unsqueeze(0)
             y = y[1].unsqueeze(0)
+            print(y.shape)
             y_pred = model.predict(x)
 
             for hide_label in range(4):
-                for target_label in range(4):
-                    if target_label != hide_label:
-                        y_target = generate_hide_one_label(y, hide_label, target_label)
+                y_target = hide_with_nearest_segment(y, hide_label)
+                perturbation = attack.epsilon_attack(x, y_target, alpha=0.01, max_iter=200, clipping=0.1)
 
-                        perturbation = attack.epsilon_attack(x, y_target, alpha=0.01, max_iter=100, clipping=0.05)
+                X_fooling = x + perturbation
+                X_fooling = torch.clamp(X_fooling, min=0, max=1)
 
-                        X_fooling = x + perturbation
-                        y_attack_pred = model.predict(X_fooling)
-                        print("hide label", hide_label, "target label", target_label)
-                        print("before attack", count_label(y_pred))
-                        print("after attack", count_label(y_attack_pred))
+                y_attack_pred = model.predict(X_fooling)
+                print("hide label", hide_label)
+                print("before attack", count_label(y_pred))
+                print("after attack", count_label(y_attack_pred))
+                visualize_attack_results(f"nn_hide_{hide_label}_image_epsilon",
+                                         x, X_fooling, perturbation, y, y_pred, y_attack_pred)
 
-                        visualize_attack_results(f"hide_{hide_label}_target_{target_label}_image_epsilon",
-                                                 x, X_fooling, perturbation, y, y_pred, y_attack_pred)
-
-            y_target = generate_random_label(y)
-            perturbation = attack.epsilon_attack(x, y_target, alpha=0.01, max_iter=100, clipping=0.1)
-            # perturbation = epsilon_attack(model, x, y)
-
-            X_fooling = x + perturbation
-            y_attack_pred = model.predict(X_fooling)
-            print("random attack")
-            print("before attack", count_label(y_pred))
-            print("after attack", count_label(y_attack_pred))
-
-            visualize_attack_results(f"random_attack_image_epsilon",
-                                     x, X_fooling, perturbation, y, y_pred, y_attack_pred)
-
-            break
+            # for hide_label in range(4):
+            #     for target_label in range(4):
+            #         if target_label != hide_label:
+            #             y_target = generate_hide_one_label(y, hide_label, target_label)
+            #
+            #             perturbation = attack.epsilon_attack(x, y_target, alpha=0.01, max_iter=200, clipping=0.1)
+            #
+            #             X_fooling = x + perturbation
+            #             y_attack_pred = model.predict(X_fooling)
+            #             print("hide label", hide_label, "target label", target_label)
+            #             print("before attack", count_label(y_pred))
+            #             print("after attack", count_label(y_attack_pred))
+            #
+            #             visualize_attack_results(f"hide_{hide_label}_target_{target_label}_image_epsilon",
+            #                                      x, X_fooling, perturbation, y, y_pred, y_attack_pred)
 
 
 if __name__ == "__main__":

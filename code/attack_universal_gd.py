@@ -5,7 +5,7 @@ from data import NeuroDataModule
 from model import SegmentationModule
 from utils import visualize_attack_results
 from labels import generate_random_label, generate_hide_one_label, count_label
-
+from labels2 import hide_with_nearest_segment
 
 class GradientDescentUniversalAttack:
     def __init__(self, model, dataset=NeuroDataModule(32)):
@@ -26,7 +26,8 @@ class GradientDescentUniversalAttack:
                 if idx % 2 == 1:
                     continue
                 x, y = batch
-                y_target = torch.where(y == 1, 2, y)
+                # y_target = torch.where(y == 1, 2, y)
+                y_target = hide_with_nearest_segment(y, 2)
                 batch_size = x.shape[0]
                 epsilon_batch = torch.tile(epsilon, (batch_size, 1, 1, 1))
 
